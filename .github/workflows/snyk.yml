@@ -1,0 +1,37 @@
+# Snyk Open Source dependency scan (#1820).
+# Skips when SNYK_TOKEN is unset (admin adds the secret) and on fork PRs
+# (secrets are unavailable there; use the Snyk GitHub App + Socket for forks).
+name: 🔐 Snyk
+
+on:
+  merge_group:
+    types:
+      - checks_requested
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  snyk:
+    name: 🔐 Snyk Open Source
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Fork PRs never get secrets; also no-op until an admin sets SNYK_TOKEN.
+    if: >-
+      secrets.SNYK_TOKEN != '' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          submodules: false
+
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
