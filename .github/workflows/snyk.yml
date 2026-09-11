@@ -1,6 +1,8 @@
 # Snyk Open Source dependency scan (#1820).
-# Skips when SNYK_TOKEN is unset (admin adds the secret) and on fork PRs
-# (secrets are unavailable there; use the Snyk GitHub App + Socket for forks).
+# Skips on fork PRs: GitHub does not pass Actions secrets to workflows from
+# forks, so SNYK_TOKEN would be empty and the job would fail auth. Fork PRs
+# are covered by the Snyk GitHub App (PR checks) once the repo is imported,
+# plus Socket which already runs.
 name: 🔐 Snyk
 
 on:
@@ -18,11 +20,10 @@ jobs:
     name: 🔐 Snyk Open Source
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # Fork PRs never get secrets; also no-op until an admin sets SNYK_TOKEN.
+    # Same-repo PRs and pushes only — forks never receive SNYK_TOKEN.
     if: >-
-      secrets.SNYK_TOKEN != '' &&
-      (github.event_name != 'pull_request' ||
-       github.event.pull_request.head.repo.full_name == github.repository)
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
